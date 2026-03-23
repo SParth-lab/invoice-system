@@ -22,7 +22,7 @@ export default function ItemsTable({ items, onAdd, onRemove, onUpdate }) {
       </div>
 
       {/* Header */}
-      <div className="hidden md:grid grid-cols-[40px_2fr_90px_120px_120px_40px] gap-2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl mb-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
+      <div className="hidden md:grid grid-cols-[40px_2fr_100px_140px_140px_40px] gap-2 px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl mb-3 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
         <div className="text-center">#</div>
         <div>Description</div>
         <div className="text-center">Qty</div>
@@ -38,21 +38,21 @@ export default function ItemsTable({ items, onAdd, onRemove, onUpdate }) {
           return (
             <div
               key={item._localId}
-              className="group animate-fade-in grid grid-cols-1 md:grid-cols-[40px_2fr_90px_120px_120px_40px] gap-3 md:gap-2 items-center p-4 md:p-2 border border-slate-200 md:border-transparent md:hover:border-slate-200 md:hover:bg-white rounded-xl bg-slate-50 md:bg-transparent transition-all"
+              className="group animate-fade-in grid grid-cols-1 md:grid-cols-[40px_2fr_100px_140px_140px_40px] gap-3 md:gap-2 items-center p-4 md:p-2 border border-slate-200 md:border-transparent md:hover:border-slate-200 md:hover:bg-white rounded-xl bg-slate-50 md:bg-transparent transition-all"
             >
               <div className="hidden md:block text-[13px] font-bold text-slate-400 text-center">
                 {idx + 1}
               </div>
               <input
-                className="w-full px-4 py-2 bg-white md:bg-slate-50 md:group-hover:bg-white border md:border-transparent md:hover:border-slate-300 md:focus:border-primary-400 rounded-lg text-[13px] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 placeholder-slate-400 transition-all"
+                className="w-full px-3 py-2 bg-white md:bg-slate-50 md:group-hover:bg-white border md:border-transparent md:hover:border-slate-300 md:focus:border-primary-400 rounded-lg text-[13px] font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 placeholder-slate-400 transition-all"
                 placeholder="Item designation..."
                 value={item.description}
                 onChange={(e) => onUpdate(item._localId, "description", e.target.value)}
               />
-              <div className="flex items-center gap-3 md:block">
+              <div className="flex items-center gap-3 md:block w-full">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider md:hidden w-16">Qty</span>
                 <input
-                  className="flex-1 text-center px-4 py-2 bg-white md:bg-slate-50 md:group-hover:bg-white border md:border-transparent md:hover:border-slate-300 md:focus:border-primary-400 rounded-lg text-[13px] font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 placeholder-slate-400 transition-all font-mono"
+                  className="w-full text-center px-2 py-2 bg-white md:bg-slate-50 md:group-hover:bg-white border md:border-transparent md:hover:border-slate-300 md:focus:border-primary-400 rounded-lg text-[13px] font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 placeholder-slate-400 transition-all font-mono"
                   type="number"
                   min="0"
                   placeholder="0"
@@ -60,10 +60,10 @@ export default function ItemsTable({ items, onAdd, onRemove, onUpdate }) {
                   onChange={(e) => onUpdate(item._localId, "qty", e.target.value)}
                 />
               </div>
-              <div className="flex items-center gap-3 md:block">
+              <div className="flex items-center gap-3 md:block w-full">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider md:hidden w-16">Price</span>
                 <input
-                  className="flex-1 text-right px-4 py-2 bg-white md:bg-slate-50 md:group-hover:bg-white border md:border-transparent md:hover:border-slate-300 md:focus:border-primary-400 rounded-lg text-[13px] font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 placeholder-slate-400 transition-all font-mono"
+                  className="w-full text-right px-3 py-2 bg-white md:bg-slate-50 md:group-hover:bg-white border md:border-transparent md:hover:border-slate-300 md:focus:border-primary-400 rounded-lg text-[13px] font-bold text-slate-900 focus:outline-none focus:ring-2 focus:ring-primary-500/20 placeholder-slate-400 transition-all font-mono"
                   type="number"
                   min="0"
                   placeholder="0.00"
@@ -71,10 +71,10 @@ export default function ItemsTable({ items, onAdd, onRemove, onUpdate }) {
                   onChange={(e) => onUpdate(item._localId, "unitPrice", e.target.value)}
                 />
               </div>
-              <div className="flex items-center gap-3 md:block">
+              <div className="flex items-center gap-3 md:block w-full">
                 <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider md:hidden w-16">Total</span>
                 <div
-                  className={`flex-1 text-right px-3 py-2 rounded-lg text-[13px] font-bold font-mono transition-colors ${
+                  className={`w-full text-right px-3 py-2 rounded-lg text-[13px] font-bold font-mono transition-colors ${
                     rowTotal > 0 ? "bg-primary-50 text-primary-700 border border-primary-100/50" : "bg-slate-100 text-slate-400 border border-transparent"
                   }`}
                 >
@@ -98,7 +98,7 @@ export default function ItemsTable({ items, onAdd, onRemove, onUpdate }) {
       {/* Totals row */}
       {items.length > 0 && (
         <div className="mt-5 p-4 md:px-3 md:py-3 bg-slate-50 rounded-xl border border-slate-200">
-          <div className="hidden md:grid grid-cols-[40px_2fr_90px_120px_120px_40px] gap-2">
+          <div className="hidden md:grid grid-cols-[40px_2fr_100px_140px_140px_40px] gap-2">
             <div></div>
             <div className="text-[12px] font-bold text-slate-400 content-center tracking-wider text-right pr-4">TOTALS</div>
             <div className="text-center text-[14px] font-bold text-slate-700 font-mono content-center">{totalQty || "—"}</div>
