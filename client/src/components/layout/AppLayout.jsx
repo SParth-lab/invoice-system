@@ -22,7 +22,7 @@ export default function AppLayout({ children }) {
     <div className="flex h-screen w-full bg-slate-50 text-slate-900 overflow-hidden font-sans">
       <Sidebar isMobileOpen={isMobileMenuOpen} setIsMobileOpen={setIsMobileMenuOpen} />
       <div className="flex flex-col flex-1 w-full overflow-hidden relative">
-        <Topbar onMenuClick={() => setIsMobileMenuOpen(true)} />
+        {/* <Topbar onMenuClick={() => setIsMobileMenuOpen(true)} /> */}
         <main className="flex-1 w-full overflow-y-auto bg-slate-50/50 p-4 sm:p-6 md:p-8 custom-scrollbar">
           <div className="max-w-[1400px] mx-auto pb-12 md:pb-0">
             {children}
