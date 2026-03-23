@@ -1,7 +1,9 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./context/AuthContext";
-import Header from "./components/Header";
+import Sidebar from "./components/Sidebar";
 import Dashboard from "./pages/Dashboard";
+import Companies from "./pages/Companies";
+import Profile from "./pages/Profile";
 import InvoiceForm from "./pages/InvoiceForm";
 import Login from "./pages/Login";
 import Register from "./pages/Register";
@@ -35,17 +37,22 @@ function AppRoutes() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <>
-      {isAuthenticated && <Header />}
-      <Routes>
-        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
-        <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
-        <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/invoice/new" element={<ProtectedRoute><InvoiceForm /></ProtectedRoute>} />
-        <Route path="/invoice/:id/edit" element={<ProtectedRoute><InvoiceForm /></ProtectedRoute>} />
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </>
+    <div className={isAuthenticated ? "app-container" : ""}>
+      {isAuthenticated && <Sidebar />}
+      <div className={isAuthenticated ? "main-content" : ""}>
+        <Routes>
+          <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
+          <Route path="/register" element={<PublicRoute><Register /></PublicRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/companies" element={<ProtectedRoute><Companies /></ProtectedRoute>} />
+          <Route path="/invoice/new" element={<ProtectedRoute><InvoiceForm /></ProtectedRoute>} />
+          <Route path="/invoice/:id/edit" element={<ProtectedRoute><InvoiceForm /></ProtectedRoute>} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+        </Routes>
+      </div>
+    </div>
   );
 }
 

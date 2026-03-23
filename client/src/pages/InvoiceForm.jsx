@@ -23,6 +23,7 @@ export default function InvoiceForm() {
   const [invoiceDate, setInvoiceDate] = useState(today);
   const [dueDate, setDueDate] = useState(defaultDue);
   const [gstRateIdx, setGstRateIdx] = useState(1);
+  const [status, setStatus] = useState("draft");
   const [items, setItems] = useState([EMPTY_ITEM()]);
   const [terms, setTerms] = useState(
     "1. Goods Once Sold Will Not Be Accepted.\n2. Interest @ 24% will be charged from the due date.\n3. Subject to SURAT Jurisdiction Only. E.&.O.E"
@@ -35,12 +36,10 @@ export default function InvoiceForm() {
   useEffect(() => {
     const init = async () => {
       try {
-        const [compRes, numRes] = await Promise.all([
+        const [compRes] = await Promise.all([
           api.get("/companies"),
-          !isEdit ? api.get("/invoices/next-number/generate") : Promise.resolve(null),
         ]);
         setCompanies(compRes.data);
-        if (numRes) setInvoiceNo(numRes.data.invoiceNo);
 
         if (isEdit) {
           const { data: inv } = await api.get(`/invoices/${id}`);
@@ -50,6 +49,7 @@ export default function InvoiceForm() {
           setInvoiceDate(inv.invoiceDate?.split("T")[0] || today);
           setDueDate(inv.dueDate?.split("T")[0] || defaultDue);
           setTerms(inv.terms || "");
+          setStatus(inv.status || "draft");
           const idx = GST_RATES.findIndex((r) => r.cgst === inv.gstRate?.cgst && r.sgst === inv.gstRate?.sgst);
           setGstRateIdx(idx >= 0 ? idx : 1);
           setItems(
@@ -70,6 +70,22 @@ export default function InvoiceForm() {
     };
     init();
   }, [id, isEdit]);
+
+  useEffect(() => {
+    const fetchNextNumber = async () => {
+      if (!isEdit && sellerId) {
+        try {
+          const { data } = await api.get(`/invoices/next-number/generate?companyId=${sellerId}`);
+          setInvoiceNo(data.invoiceNo);
+        } catch (err) {
+          console.error("Failed to fetch next invoice number", err);
+        }
+      } else if (!isEdit && !sellerId) {
+        setInvoiceNo("");
+      }
+    };
+    fetchNextNumber();
+  }, [sellerId, isEdit]);
 
   const showToast = (msg, type = "success") => {
     setToast({ msg, type });
@@ -143,7 +159,7 @@ export default function InvoiceForm() {
       {toast && <div className={`toast toast-${toast.type}`}>{toast.type === "success" ? "✓ " : "⚠ "}{toast.msg}</div>}
 
       {showAddCompany && (
-        <AddCompanyModal onClose={() => setShowAddCompany(false)} onAdded={handleCompanyAdded} />
+        <AddCompanyModal onClose={() => setShowAddCompany(false)} onSave={(newComp) => handleCompanyAdded(newComp)} />
       )}
 
       {/* Top bar */}
@@ -160,16 +176,23 @@ export default function InvoiceForm() {
         <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>
           {isEdit ? `Edit Invoice ${invoiceNo}` : "New Invoice"}
         </div>
-        <div style={{ display: "flex", gap: 8 }}>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           <button className="btn btn-outline btn-sm" onClick={() => navigate("/")}>← Back</button>
-          <button
-            className="btn btn-primary"
-            onClick={handleSave}
-            disabled={saving}
-            style={{ opacity: saving ? 0.6 : 1 }}
-          >
-            {saving ? "Saving..." : isEdit ? "Update Invoice" : "💾 Save Invoice"}
-          </button>
+          
+          {status === "finalized" ? (
+            <div style={{ padding: "6px 12px", background: "var(--accent-red-bg)", color: "var(--accent-red)", borderRadius: 6, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+              🔒 Finalized - Read Only
+            </div>
+          ) : (
+            <button
+              className="btn btn-primary"
+              onClick={handleSave}
+              disabled={saving}
+              style={{ opacity: saving ? 0.6 : 1 }}
+            >
+              {saving ? "Saving..." : isEdit ? "Update Invoice" : "💾 Save Invoice"}
+            </button>
+          )}
         </div>
       </div>
 
@@ -185,18 +208,31 @@ export default function InvoiceForm() {
         }}
       >
         {/* LEFT */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16 }} className="fade-in">
+        <div style={{ display: "flex", flexDirection: "column", gap: 16, pointerEvents: status === "finalized" ? "none" : "auto", opacity: status === "finalized" ? 0.75 : 1 }} className="fade-in">
           {/* Invoice Details */}
           <div className="card">
             <div className="section-title"><span className="icon">📋</span> Invoice Details</div>
             <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
               <div>
                 <label className="label-field">Invoice No.</label>
-                <input className="input-field" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="INV-001" />
+                <input className="input-field" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="Auto-generated" disabled style={{ background: "var(--bg-input)", color: "var(--text-muted)", cursor: "not-allowed" }} />
               </div>
               <div>
                 <label className="label-field">Invoice Date</label>
-                <input className="input-field" type="date" value={invoiceDate} onChange={(e) => setInvoiceDate(e.target.value)} />
+                <input 
+                  className="input-field" 
+                  type="date" 
+                  value={invoiceDate} 
+                  onChange={(e) => {
+                    const newDate = e.target.value;
+                    setInvoiceDate(newDate);
+                    if (newDate) {
+                      const dateObj = new Date(newDate);
+                      dateObj.setDate(dateObj.getDate() + 45);
+                      setDueDate(dateObj.toISOString().split("T")[0]);
+                    }
+                  }} 
+                />
               </div>
               <div>
                 <label className="label-field">Due Date</label>

@@ -58,6 +58,17 @@ export default function Header() {
         >
           📊 Dashboard
         </Link>
+        <Link
+          to="/companies"
+          className="btn btn-ghost"
+          style={{
+            color: pathname === "/companies" ? "var(--accent)" : undefined,
+            background: pathname === "/companies" ? "var(--accent-bg)" : undefined,
+            fontWeight: pathname === "/companies" ? 600 : 500,
+          }}
+        >
+          🏢 Companies
+        </Link>
         <Link to="/invoice/new" className="btn btn-primary btn-sm">
           + New Invoice
         </Link>
@@ -73,26 +84,28 @@ export default function Header() {
               borderLeft: "1px solid var(--border)",
             }}
           >
-            <div
-              style={{
-                width: 32,
-                height: 32,
-                borderRadius: 8,
-                background: "linear-gradient(135deg, var(--accent), var(--accent-pale))",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                fontSize: 13,
-                fontWeight: 700,
-                color: "#fff",
-              }}
-            >
-              {user.name?.charAt(0).toUpperCase()}
-            </div>
-            <div style={{ lineHeight: 1.3 }}>
-              <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)" }}>{user.name}</div>
-              <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{user.email}</div>
-            </div>
+            <Link to="/profile" style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", cursor: "pointer" }}>
+              <div
+                style={{
+                  width: 32,
+                  height: 32,
+                  borderRadius: 8,
+                  background: "linear-gradient(135deg, var(--accent), var(--accent-pale))",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: 13,
+                  fontWeight: 700,
+                  color: "#fff",
+                }}
+              >
+                {user.name?.charAt(0).toUpperCase()}
+              </div>
+              <div style={{ lineHeight: 1.3 }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: "var(--text-primary)", transition: "color 0.15s" }} onMouseOver={(e) => e.target.style.color = 'var(--accent)'} onMouseOut={(e) => e.target.style.color = 'var(--text-primary)'}>{user.name}</div>
+                <div style={{ fontSize: 10, color: "var(--text-muted)" }}>{user.email}</div>
+              </div>
+            </Link>
             <button
               onClick={logout}
               className="btn btn-ghost btn-sm"

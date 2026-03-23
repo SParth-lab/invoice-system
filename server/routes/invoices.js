@@ -64,6 +64,11 @@ router.post("/", async (req, res) => {
   try {
     const invoice = new Invoice({ ...req.body, user: req.user._id });
     await invoice.save(); // triggers pre-save hook for totals
+    
+    // increment company sequence
+    const Company = require("../models/Company");
+    await Company.findByIdAndUpdate(invoice.seller, { $inc: { lastInvoiceSequence: 1 } });
+
     const populated = await Invoice.findById(invoice._id)
       .populate("seller")
       .populate("buyer");
@@ -81,6 +86,11 @@ router.put("/:id", async (req, res) => {
   try {
     const invoice = await Invoice.findOne({ _id: req.params.id, user: req.user._id });
     if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+
+    // Block changes to finalized invoices
+    if (invoice.status === "finalized") {
+      return res.status(400).json({ error: "Cannot modify finalized invoices. They are read-only." });
+    }
 
     // Update fields
     Object.assign(invoice, req.body);
@@ -106,6 +116,22 @@ router.delete("/:id", async (req, res) => {
   }
 });
 
+// ── Helper: lighten hex color ──
+const hexToRgb = (hex) => {
+  let result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex || "#CC0000");
+  return result
+    ? { r: parseInt(result[1], 16), g: parseInt(result[2], 16), b: parseInt(result[3], 16) }
+    : { r: 204, g: 0, b: 0 };
+};
+
+const lighten = (hex, percent) => {
+  const { r, g, b } = hexToRgb(hex);
+  const newR = Math.round(r + (255 - r) * percent);
+  const newG = Math.round(g + (255 - g) * percent);
+  const newB = Math.round(b + (255 - b) * percent);
+  return `#${(1 << 24 | newR << 16 | newG << 8 | newB).toString(16).slice(1).toUpperCase()}`;
+};
+
 // GET /api/invoices/:id/pdf — generate PDF (matching reference invoice format)
 router.get("/:id/pdf", async (req, res) => {
   try {
@@ -113,6 +139,10 @@ router.get("/:id/pdf", async (req, res) => {
       .populate("seller")
       .populate("buyer");
     if (!invoice) return res.status(404).json({ error: "Invoice not found" });
+
+    const themeColor = invoice.seller.themeColor || "#CC0000";
+    const lightThemeColor = lighten(themeColor, 0.92);
+    const lighterThemeColor = lighten(themeColor, 0.85);
 
     const doc = new PDFDocument({ size: "A4", margin: 30 });
 
@@ -128,6 +158,22 @@ router.get("/:id/pdf", async (req, res) => {
     const right = left + pageW;
     let y = 30;
 
+    // Fetch Logo
+    let logoBuffer = null;
+    if (invoice.seller.logoUrl) {
+      try {
+        const logoRes = await fetch(invoice.seller.logoUrl);
+        if (logoRes.ok) {
+          const arr = await logoRes.arrayBuffer();
+          logoBuffer = Buffer.from(arr);
+        }
+      } catch (e) {
+        console.error("Failed to load logo", e.message);
+      }
+    }
+
+    const template = invoice.seller.pdfTemplate || "standard";
+
     // Helper: draw filled rect
     const fillRect = (x, _y, w, h, color) => {
       doc.save().rect(x, _y, w, h).fill(color).restore();
@@ -139,12 +185,33 @@ router.get("/:id/pdf", async (req, res) => {
     };
 
     // ═══════════════════════════════════════════════
-    // HEADER — Seller company name (bold, large, red)
+    // HEADER (Template Based)
     // ═══════════════════════════════════════════════
-    fillRect(left, y, pageW, 36, "#FFF3E0");
-    doc.font("Helvetica-Bold").fontSize(24).fillColor("#CC0000");
-    doc.text(invoice.seller.name.toUpperCase(), left, y + 6, { width: pageW, align: "center" });
-    y += 38;
+    if (template === "minimal") {
+      if (logoBuffer) {
+        doc.image(logoBuffer, left, y, { height: 36 });
+      }
+      doc.font("Helvetica-Bold").fontSize(22).fillColor("#000");
+      doc.text(invoice.seller.name.toUpperCase(), left, y + 42, { width: pageW, align: "left" });
+      y += 66;
+    } else if (template === "modern") {
+      if (logoBuffer) {
+        doc.image(logoBuffer, left + (pageW - 100) / 2, y, { height: 40, align: "center" });
+        y += 46;
+      }
+      doc.font("Helvetica-Bold").fontSize(26).fillColor(themeColor);
+      doc.text(invoice.seller.name.toUpperCase(), left, y, { width: pageW, align: "center" });
+      y += 34;
+    } else {
+      // standard
+      fillRect(left, y, pageW, 36, lightThemeColor);
+      if (logoBuffer) {
+        doc.image(logoBuffer, left + 10, y + 4, { height: 28 });
+      }
+      doc.font("Helvetica-Bold").fontSize(24).fillColor(themeColor);
+      doc.text(invoice.seller.name.toUpperCase(), left, y + 6, { width: pageW, align: "center" });
+      y += 38;
+    }
 
     // Seller address
     doc.font("Helvetica-Bold").fontSize(9).fillColor("#000");
@@ -179,7 +246,7 @@ router.get("/:id/pdf", async (req, res) => {
     // Row 1
     doc.font("Helvetica-Bold").fontSize(9).fillColor("#000");
     doc.text("Invoice No.", metaLabelX, metaStartY + 6, { width: metaW });
-    doc.font("Helvetica").fillColor("#CC0000");
+    doc.font("Helvetica").fillColor(themeColor);
     doc.text(invoice.invoiceNo, metaValueX, metaStartY + 6, { width: metaW });
 
     // Row 2
@@ -206,7 +273,7 @@ router.get("/:id/pdf", async (req, res) => {
     doc.text("SHIP TO", midX + 5, y, { width: halfW });
     y += 14;
 
-    doc.font("Helvetica-Bold").fontSize(10).fillColor("#CC0000");
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(themeColor);
     doc.text(invoice.buyer.name.toUpperCase(), left + 5, y, { width: halfW - 10 });
     doc.text(invoice.buyer.name.toUpperCase(), midX + 5, y, { width: halfW - 10 });
     y += 14;
@@ -226,7 +293,7 @@ router.get("/:id/pdf", async (req, res) => {
     // ITEMS TABLE
     // ═══════════════════════════════════════════════
     // Red header row
-    fillRect(left, y, pageW, 18, "#CC0000");
+    fillRect(left, y, pageW, 18, themeColor);
 
     const colDesc = left + 5;
     const colQty = left + pageW * 0.55;
@@ -283,7 +350,7 @@ router.get("/:id/pdf", async (req, res) => {
     const totalsValueX = colTotal;
 
     // Terms (left side)
-    doc.font("Helvetica-Bold").fontSize(9).fillColor("#CC0000");
+    doc.font("Helvetica-Bold").fontSize(9).fillColor(themeColor);
     doc.text("Terms & Instructions", left + 5, termsStartY, { width: colDescW });
 
     doc.font("Helvetica").fontSize(8).fillColor("#000");
@@ -298,7 +365,7 @@ router.get("/:id/pdf", async (req, res) => {
     let totY = termsStartY;
 
     // SUBTOTAL
-    fillRect(totalsLabelX, totY, pageW - (totalsLabelX - left), 16, "#FFF3E0");
+    fillRect(totalsLabelX, totY, pageW - (totalsLabelX - left), 16, lightThemeColor);
     doc.font("Helvetica-Bold").fontSize(9).fillColor("#000");
     doc.text("SUBTOTAL", totalsLabelX + 5, totY + 3, { width: colPriceW + 20 });
     doc.text("₹", colTotal - 10, totY + 3, { width: 15, align: "right" });
@@ -323,8 +390,8 @@ router.get("/:id/pdf", async (req, res) => {
     totY += 20;
 
     // TOTAL BILL AMOUNT (red background)
-    fillRect(totalsLabelX, totY, pageW - (totalsLabelX - left), 20, "#FFE0E0");
-    doc.font("Helvetica-Bold").fontSize(10).fillColor("#CC0000");
+    fillRect(totalsLabelX, totY, pageW - (totalsLabelX - left), 20, lighterThemeColor);
+    doc.font("Helvetica-Bold").fontSize(10).fillColor(themeColor);
     doc.text("TOTAL BILL AMOUNT", totalsLabelX + 5, totY + 4, { width: colPriceW + 20 });
     doc.text("₹", colTotal - 10, totY + 4, { width: 15, align: "right" });
     doc.font("Helvetica-Bold").fontSize(11);
@@ -356,6 +423,21 @@ router.get("/:id/pdf", async (req, res) => {
 // GET /api/invoices/next-number — get next invoice number
 router.get("/next-number/generate", async (req, res) => {
   try {
+    const { companyId } = req.query;
+    
+    if (companyId) {
+      const Company = require("../models/Company");
+      const company = await Company.findOne({ _id: companyId, user: req.user._id }) || await Company.findOne({ _id: companyId });
+      // Note: Company schema has userId not user, wait, let me just allow findById, or let's use the current user id check.
+      // Wait, let's just find the company by ID to be safe, we have access since they are selecting it.
+      const companyDoc = await Company.findOne({ _id: companyId, userId: req.user._id });
+      if (companyDoc) {
+        const nextNum = (companyDoc.lastInvoiceSequence || 0) + 1;
+        const prefix = companyDoc.invoicePrefix || "INV-";
+        return res.json({ invoiceNo: `${prefix}${String(nextNum).padStart(3, "0")}` });
+      }
+    }
+
     const last = await Invoice.findOne({ user: req.user._id }).sort({ createdAt: -1 }).select("invoiceNo");
     let nextNum = 1;
     if (last && last.invoiceNo) {

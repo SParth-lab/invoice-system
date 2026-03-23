@@ -5,18 +5,25 @@ import { fmt } from "../utils/helpers";
 
 export default function Dashboard() {
   const [invoices, setInvoices] = useState([]);
+  const [companies, setCompanies] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedCompanyId, setSelectedCompanyId] = useState("");
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetchInvoices();
+    fetchData();
   }, []);
 
-  const fetchInvoices = async () => {
+  const fetchData = async () => {
     try {
-      const { data } = await api.get("/invoices");
-      setInvoices(data);
+      const [invRes, compRes] = await Promise.all([
+        api.get("/invoices"),
+        api.get("/companies")
+      ]);
+      setInvoices(invRes.data);
+      setCompanies(compRes.data);
     } catch (err) {
-      console.error("Failed to fetch invoices:", err);
+      console.error("Failed to fetch data:", err);
     } finally {
       setLoading(false);
     }
@@ -56,10 +63,29 @@ export default function Dashboard() {
     );
   }
 
+  // Derived filtered state
+  const filteredInvoices = invoices.filter(inv => {
+    const matchesSearch = inv.invoiceNo.toLowerCase().includes(searchTerm.toLowerCase()) || 
+                          (inv.buyer?.name || "").toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesCompany = selectedCompanyId ? inv.seller?._id === selectedCompanyId : true;
+    return matchesSearch && matchesCompany;
+  });
+
   // Stats
-  const totalAmount = invoices.reduce((s, inv) => s + (inv.grandTotal || 0), 0);
-  const draftCount = invoices.filter((i) => i.status === "draft").length;
-  const finalizedCount = invoices.filter((i) => i.status === "finalized").length;
+  const totalAmount = filteredInvoices.reduce((s, inv) => s + (inv.grandTotal || 0), 0);
+  const draftCount = filteredInvoices.filter((i) => i.status === "draft").length;
+  const finalizedCount = filteredInvoices.filter((i) => i.status === "finalized").length;
+
+  // Chart Data
+  const chartData = {};
+  filteredInvoices.forEach(inv => {
+    const key = selectedCompanyId ? (inv.buyer?.name || "Unknown Buyer") : (inv.seller?.name || "Unknown Seller");
+    chartData[key] = (chartData[key] || 0) + (inv.grandTotal || 0);
+  });
+  const chartEntries = Object.entries(chartData)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 5);
+  const maxChartValue = Math.max(...chartEntries.map(e => e[1]), 1);
 
   return (
     <div style={{ maxWidth: 1100, margin: "0 auto", padding: "28px 20px" }} className="fade-in">
@@ -76,11 +102,36 @@ export default function Dashboard() {
         </Link>
       </div>
 
+      {/* Filter Bar */}
+      <div className="card slide-up" style={{ display: "flex", gap: 16, marginBottom: 24, padding: "16px 20px" }}>
+        <div style={{ flex: 1 }}>
+          <input 
+            type="text" 
+            className="input-field" 
+            placeholder="Search by Invoice No. or Buyer Name..." 
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+          />
+        </div>
+        <div style={{ width: 300 }}>
+          <select 
+            className="input-field" 
+            value={selectedCompanyId} 
+            onChange={(e) => setSelectedCompanyId(e.target.value)}
+          >
+            <option value="">All Companies (Sellers)</option>
+            {companies.map(c => (
+              <option key={c._id} value={c._id}>{c.name}</option>
+            ))}
+          </select>
+        </div>
+      </div>
+
       {/* Stats cards */}
       <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16, marginBottom: 24 }}>
         {[
-          { label: "Total Invoices", value: invoices.length, icon: "📄", color: "var(--accent)" },
-          { label: "Total Amount", value: `₹${fmt(totalAmount)}`, icon: "💰", color: "var(--accent-green)" },
+          { label: "Filtered Invoices", value: filteredInvoices.length, icon: "📄", color: "var(--accent)" },
+          { label: "Total Revenue", value: `₹${fmt(totalAmount)}`, icon: "💰", color: "var(--accent-green)" },
           { label: "Draft / Finalized", value: `${draftCount} / ${finalizedCount}`, icon: "📊", color: "var(--accent-yellow)" },
         ].map((stat) => (
           <div
@@ -110,8 +161,41 @@ export default function Dashboard() {
         ))}
       </div>
 
+      {/* Revenue Chart */}
+      {chartEntries.length > 0 && (
+        <div className="card slide-up" style={{ marginBottom: 24 }}>
+          <div className="section-title"><span className="icon">📈</span> Revenue Breakdown (Top 5 {selectedCompanyId ? "Buyers" : "Sellers"})</div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            {chartEntries.map(([name, amount]) => {
+              const pct = (amount / maxChartValue) * 100;
+              return (
+                <div key={name} style={{ display: "flex", alignItems: "center", gap: 16 }}>
+                  <div style={{ width: 140, fontSize: 13, fontWeight: 500, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {name}
+                  </div>
+                  <div style={{ flex: 1, background: "var(--bg-input)", height: 24, borderRadius: 4, overflow: "hidden" }}>
+                    <div 
+                      style={{ 
+                        width: `${pct}%`, 
+                        height: "100%", 
+                        background: "linear-gradient(90deg, var(--accent), var(--accent-light))",
+                        transition: "width 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)",
+                        borderRadius: 4
+                      }} 
+                    />
+                  </div>
+                  <div className="mono" style={{ width: 120, textAlign: "right", fontSize: 13, fontWeight: 600 }}>
+                    ₹{fmt(amount)}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Invoice table */}
-      {invoices.length === 0 ? (
+      {filteredInvoices.length === 0 ? (
         <div className="card slide-up" style={{ textAlign: "center", padding: "60px 20px" }}>
           <div style={{ fontSize: 40, marginBottom: 12 }}>📄</div>
           <h2 style={{ fontSize: 17, fontWeight: 600, marginBottom: 6 }}>No invoices yet</h2>
@@ -146,7 +230,7 @@ export default function Dashboard() {
             <div style={{ textAlign: "center" }}>Actions</div>
           </div>
 
-          {invoices.map((inv) => (
+          {filteredInvoices.map((inv) => (
             <div
               key={inv._id}
               className="table-row"

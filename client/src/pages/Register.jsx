@@ -7,6 +7,8 @@ export default function Register() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { register } = useAuth();
@@ -21,7 +23,7 @@ export default function Register() {
     setLoading(true);
     try {
       await register(name, email, password);
-      navigate("/");
+      navigate("/dashboard");
     } catch (err) {
       setError(err.response?.data?.error || "Registration failed.");
     } finally {
@@ -102,11 +104,17 @@ export default function Register() {
           </div>
           <div style={{ marginBottom: 14 }}>
             <label className="label-field">Password</label>
-            <input className="input-field" type="password" placeholder="Min 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <div style={{ position: "relative" }}>
+              <input className="input-field" type={showPassword ? "text" : "password"} placeholder="Min 6 characters" value={password} onChange={(e) => setPassword(e.target.value)} style={{ paddingRight: 50 }} />
+              <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>{showPassword ? "Hide" : "Show"}</button>
+            </div>
           </div>
           <div style={{ marginBottom: 24 }}>
             <label className="label-field">Confirm Password</label>
-            <input className="input-field" type="password" placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
+            <div style={{ position: "relative" }}>
+              <input className="input-field" type={showConfirmPassword ? "text" : "password"} placeholder="••••••••" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} style={{ paddingRight: 50 }} />
+              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: "absolute", right: 12, top: "50%", transform: "translateY(-50%)", background: "none", border: "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--text-muted)" }}>{showConfirmPassword ? "Hide" : "Show"}</button>
+            </div>
           </div>
           <button
             type="submit"

@@ -24,6 +24,30 @@ const companySchema = new mongoose.Schema(
       ref: "User",
       required: [true, "User ID is required"],
     },
+    themeColor: {
+      type: String,
+      default: "#CC0000",
+      trim: true,
+    },
+    invoicePrefix: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    lastInvoiceSequence: {
+      type: Number,
+      default: 0,
+    },
+    logoUrl: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+    pdfTemplate: {
+      type: String,
+      enum: ["standard", "modern", "minimal"],
+      default: "standard",
+    },
   },
   {
     timestamps: true,
