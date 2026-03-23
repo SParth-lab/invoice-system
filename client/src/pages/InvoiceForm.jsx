@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import api from "../api";
-import { GST_RATES, fmt, num } from "../utils/helpers";
+import { GST_RATES, num } from "../utils/helpers";
 import ItemsTable from "../components/ItemsTable";
 import LiveCalc from "../components/LiveCalc";
 import AddCompanyModal from "../components/AddCompanyModal";
@@ -148,79 +148,91 @@ export default function InvoiceForm() {
 
   if (loading) {
     return (
-      <div style={{ display: "flex", justifyContent: "center", alignItems: "center", minHeight: "60vh" }}>
-        <div className="spinner" />
+      <div className="flex justify-center items-center min-h-[60vh]">
+        <div className="w-8 h-8 rounded-full border-4 border-slate-200 border-t-primary-600 animate-spin" />
       </div>
     );
   }
 
   return (
-    <div style={{ minHeight: "100vh", background: "var(--bg-body)" }}>
-      {toast && <div className={`toast toast-${toast.type}`}>{toast.type === "success" ? "✓ " : "⚠ "}{toast.msg}</div>}
+    <div className="max-w-[1400px] mx-auto animate-fade-in relative pb-20 md:pb-8">
+      {/* Toast Notification */}
+      {toast && (
+        <div className={`fixed top-6 right-6 z-50 px-5 py-3 rounded-xl shadow-lg border text-sm font-bold flex items-center gap-2 animate-fade-in ${
+          toast.type === "success" 
+            ? "bg-emerald-50 border-emerald-200 text-emerald-700" 
+            : "bg-red-50 border-red-200 text-red-700"
+        }`}>
+          <span>{toast.type === "success" ? "✓" : "⚠"}</span>
+          {toast.msg}
+        </div>
+      )}
 
       {showAddCompany && (
         <AddCompanyModal onClose={() => setShowAddCompany(false)} onSave={(newComp) => handleCompanyAdded(newComp)} />
       )}
 
-      {/* Top bar */}
-      <div
-        style={{
-          background: "var(--bg-white)",
-          borderBottom: "1px solid var(--border)",
-          padding: "10px 24px",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-        }}
-      >
-        <div style={{ fontSize: 15, fontWeight: 600, color: "var(--text-primary)" }}>
-          {isEdit ? `Edit Invoice ${invoiceNo}` : "New Invoice"}
+      {/* Header Actions */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+        <div>
+          <button 
+            onClick={() => navigate(-1)} 
+            className="text-slate-500 hover:text-slate-900 text-sm font-medium flex items-center gap-1 mb-2 transition-colors"
+          >
+            ← Back
+          </button>
+          <h1 className="text-2xl font-bold text-slate-900 tracking-tight">
+            {isEdit ? `Edit Invoice: ${invoiceNo}` : "Create New Invoice"}
+          </h1>
         </div>
-        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <button className="btn btn-outline btn-sm" onClick={() => navigate("/")}>← Back</button>
-          
+        
+        <div className="flex items-center gap-3 w-full sm:w-auto">
           {status === "finalized" ? (
-            <div style={{ padding: "6px 12px", background: "var(--accent-red-bg)", color: "var(--accent-red)", borderRadius: 6, fontSize: 13, fontWeight: 600, display: "flex", alignItems: "center", gap: 6 }}>
+            <div className="px-5 py-2.5 bg-red-50 text-red-600 border border-red-100 rounded-xl text-sm font-bold flex items-center gap-2 w-full justify-center">
               🔒 Finalized - Read Only
             </div>
           ) : (
             <button
-              className="btn btn-primary"
               onClick={handleSave}
               disabled={saving}
-              style={{ opacity: saving ? 0.6 : 1 }}
+              className={`w-full sm:w-auto px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white text-sm font-semibold rounded-xl shadow-sm hover:shadow-md transition-all active:scale-95 flex items-center justify-center gap-2 ${saving ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              {saving ? "Saving..." : isEdit ? "Update Invoice" : "💾 Save Invoice"}
+              {saving ? (
+                <div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              ) : (
+                "💾"
+              )}
+              {saving ? "Saving..." : isEdit ? "Update Invoice" : "Save Invoice"}
             </button>
           )}
         </div>
       </div>
 
-      <div
-        style={{
-          maxWidth: 1140,
-          margin: "0 auto",
-          padding: "24px 20px",
-          display: "grid",
-          gridTemplateColumns: "1fr 320px",
-          gap: 20,
-          alignItems: "start",
-        }}
-      >
-        {/* LEFT */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 16, pointerEvents: status === "finalized" ? "none" : "auto", opacity: status === "finalized" ? 0.75 : 1 }} className="fade-in">
-          {/* Invoice Details */}
-          <div className="card">
-            <div className="section-title"><span className="icon">📋</span> Invoice Details</div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+      <div className={`grid grid-cols-1 lg:grid-cols-[1fr_340px] xl:grid-cols-[1fr_380px] gap-6 xl:gap-8 items-start ${status === "finalized" ? "pointer-events-none opacity-80 backdrop-grayscale-[0.5]" : ""}`}>
+        
+        {/* LEFT COLUMN */}
+        <div className="flex flex-col gap-6 lg:gap-8 animate-slide-up">
+          
+          {/* Top Info Grid */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-5">
+              <span className="text-lg">📋</span> Document Details
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
               <div>
-                <label className="label-field">Invoice No.</label>
-                <input className="input-field" value={invoiceNo} onChange={(e) => setInvoiceNo(e.target.value)} placeholder="Auto-generated" disabled style={{ background: "var(--bg-input)", color: "var(--text-muted)", cursor: "not-allowed" }} />
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Invoice No.</label>
+                <input 
+                  className="w-full px-4 py-2.5 bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-500 font-mono cursor-not-allowed" 
+                  value={invoiceNo} 
+                  onChange={(e) => setInvoiceNo(e.target.value)} 
+                  placeholder="Auto-generated" 
+                  disabled 
+                />
               </div>
               <div>
-                <label className="label-field">Invoice Date</label>
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Invoice Date</label>
                 <input 
-                  className="input-field" 
+                  className="w-full px-4 py-2 bg-white border border-slate-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 rounded-xl text-sm font-medium text-slate-900 transition-all outline-none" 
                   type="date" 
                   value={invoiceDate} 
                   onChange={(e) => {
@@ -235,91 +247,116 @@ export default function InvoiceForm() {
                 />
               </div>
               <div>
-                <label className="label-field">Due Date</label>
-                <input className="input-field" type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} />
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Due Date</label>
+                <input 
+                  className="w-full px-4 py-2 bg-white border border-slate-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 rounded-xl text-sm font-medium text-slate-900 transition-all outline-none" 
+                  type="date" 
+                  value={dueDate} 
+                  onChange={(e) => setDueDate(e.target.value)} 
+                />
               </div>
             </div>
           </div>
 
-          {/* Company Selection */}
-          <div className="card">
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-              <div className="section-title" style={{ marginBottom: 0 }}><span className="icon">🏢</span> Companies</div>
-              <button className="btn btn-outline btn-sm" onClick={() => setShowAddCompany(true)}>
+          {/* Companies Selection */}
+          <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+            <div className="flex justify-between items-center mb-5">
+              <div className="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <span className="text-lg">🏢</span> Parties & Companies
+              </div>
+              <button 
+                className="text-[12px] font-bold text-primary-600 hover:text-primary-700 bg-primary-50 hover:bg-primary-100 px-3 py-1.5 rounded-lg transition-colors border border-primary-100" 
+                onClick={() => setShowAddCompany(true)}
+              >
                 + Add Company
               </button>
             </div>
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Seller */}
-              <div>
-                <label className="label-field">Seller (From)</label>
-                <select className="input-field" value={sellerId} onChange={(e) => setSellerId(e.target.value)} style={{ cursor: "pointer" }}>
+              <div className="flex flex-col">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Seller (From)</label>
+                <select 
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 rounded-xl text-sm font-medium text-slate-900 transition-all outline-none appearance-none cursor-pointer" 
+                  value={sellerId} 
+                  onChange={(e) => setSellerId(e.target.value)}
+                  style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 1rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em` }}
+                >
                   <option value="">— Select Seller —</option>
                   {companies.filter((c) => c._id !== buyerId).map((c) => (
                     <option key={c._id} value={c._id}>{c.name}</option>
                   ))}
                 </select>
                 {seller && (
-                  <div style={{ marginTop: 10, padding: "10px 12px", background: "var(--accent-bg)", border: "1px solid var(--border)", borderRadius: 8 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: "var(--accent)", marginBottom: 4 }}>{seller.name}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.6 }}>{seller.address}</div>
-                    <div style={{ marginTop: 6 }}>
-                      <span className="tag tag-blue">GST: {seller.gst}</span>
-                    </div>
+                  <div className="mt-3 p-4 bg-primary-50 border border-primary-100/50 rounded-xl">
+                    <div className="font-bold text-sm text-primary-800 mb-1">{seller.name}</div>
+                    <div className="text-[11px] text-primary-600/80 leading-relaxed mb-3 pr-4">{seller.address}</div>
+                    <span className="inline-flex items-center px-2 py-1 rounded bg-white border border-primary-100 text-[10px] font-bold font-mono text-primary-600 shadow-sm">
+                      GST: {seller.gst}
+                    </span>
                   </div>
                 )}
               </div>
+
               {/* Buyer */}
-              <div>
-                <label className="label-field">Buyer (Bill To)</label>
-                <select className="input-field" value={buyerId} onChange={(e) => setBuyerId(e.target.value)} style={{ cursor: "pointer" }}>
+              <div className="flex flex-col">
+                <label className="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Buyer (Bill To)</label>
+                <select 
+                  className="w-full px-4 py-2.5 bg-white border border-slate-200 focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/10 rounded-xl text-sm font-medium text-slate-900 transition-all outline-none appearance-none cursor-pointer" 
+                  value={buyerId} 
+                  onChange={(e) => setBuyerId(e.target.value)}
+                  style={{ backgroundImage: `url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e")`, backgroundPosition: `right 1rem center`, backgroundRepeat: `no-repeat`, backgroundSize: `1.5em 1.5em` }}
+                >
                   <option value="">— Select Buyer —</option>
                   {companies.filter((c) => c._id !== sellerId).map((c) => (
                     <option key={c._id} value={c._id}>{c.name}</option>
                   ))}
                 </select>
                 {buyer && (
-                  <div style={{ marginTop: 10, padding: "10px 12px", background: "var(--accent-green-bg)", border: "1px solid var(--border)", borderRadius: 8 }}>
-                    <div style={{ fontWeight: 700, fontSize: 13, color: "var(--accent-green)", marginBottom: 4 }}>{buyer.name}</div>
-                    <div style={{ fontSize: 11, color: "var(--text-secondary)", lineHeight: 1.6 }}>{buyer.address}</div>
-                    <div style={{ marginTop: 6 }}>
-                      <span className="tag tag-green">GST: {buyer.gst}</span>
-                    </div>
+                  <div className="mt-3 p-4 bg-emerald-50 border border-emerald-100/50 rounded-xl">
+                    <div className="font-bold text-sm text-emerald-800 mb-1">{buyer.name}</div>
+                    <div className="text-[11px] text-emerald-600/80 leading-relaxed mb-3 pr-4">{buyer.address}</div>
+                    <span className="inline-flex items-center px-2 py-1 rounded bg-white border border-emerald-100 text-[10px] font-bold font-mono text-emerald-600 shadow-sm">
+                      GST: {buyer.gst}
+                    </span>
                   </div>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Items */}
+          {/* Line Items Table */}
           <ItemsTable items={items} onAdd={addItem} onRemove={removeItem} onUpdate={updateItem} />
 
-          {/* GST + Terms */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-            <div className="card">
-              <div className="section-title"><span className="icon">💹</span> GST Rate</div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {/* GST and Terms Bottom Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8 lg:mb-0">
+            {/* GST Rate */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+              <div className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
+                <span className="text-lg">💹</span> Select GST Rate
+              </div>
+              <div className="flex flex-col gap-2.5">
                 {GST_RATES.map((r, i) => (
                   <label
                     key={i}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: 10,
-                      padding: "8px 12px",
-                      borderRadius: 8,
-                      background: gstRateIdx === i ? "var(--accent-bg)" : "var(--bg-input)",
-                      border: `1.5px solid ${gstRateIdx === i ? "var(--accent)" : "var(--border-light)"}`,
-                      cursor: "pointer",
-                      transition: "all .15s",
-                    }}
+                    className={`flex items-center gap-3 p-3.5 rounded-xl border-2 cursor-pointer transition-all ${
+                      gstRateIdx === i 
+                        ? "bg-primary-50/50 border-primary-500 shadow-sm" 
+                        : "bg-white border-slate-100 hover:border-slate-200 hover:bg-slate-50"
+                    }`}
                   >
-                    <input type="radio" name="gst" checked={gstRateIdx === i} onChange={() => setGstRateIdx(i)} style={{ accentColor: "var(--accent)" }} />
-                    <span style={{ fontSize: 13, fontWeight: gstRateIdx === i ? 600 : 400, color: gstRateIdx === i ? "var(--accent)" : "var(--text-secondary)" }}>
+                    <input 
+                      type="radio" 
+                      name="gst" 
+                      checked={gstRateIdx === i} 
+                      onChange={() => setGstRateIdx(i)} 
+                      className="w-4 h-4 text-primary-600 border-slate-300 focus:ring-primary-500" 
+                    />
+                    <span className={`text-sm tracking-tight ${gstRateIdx === i ? "font-bold text-primary-700" : "font-medium text-slate-600"}`}>
                       {r.label}
                     </span>
                     {i > 0 && (
-                      <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-muted)" }}>
+                      <span className="ml-auto text-[11px] font-bold font-mono text-slate-400">
                         CGST {r.cgst}% + SGST {r.sgst}%
                       </span>
                     )}
@@ -327,39 +364,31 @@ export default function InvoiceForm() {
                 ))}
               </div>
             </div>
-            <div className="card">
-              <div className="section-title"><span className="icon">📝</span> Terms & Conditions</div>
+
+            {/* Terms and Conditions */}
+            <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6 flex flex-col">
+              <div className="text-sm font-bold text-slate-800 flex items-center gap-2 mb-4">
+                <span className="text-lg">📝</span> Terms & Conditions
+              </div>
               <textarea
                 value={terms}
                 onChange={(e) => setTerms(e.target.value)}
-                style={{
-                  width: "100%",
-                  height: 174,
-                  background: "var(--bg-input)",
-                  border: "1.5px solid var(--border)",
-                  borderRadius: 10,
-                  padding: "12px 14px",
-                  color: "var(--text-secondary)",
-                  fontSize: 12,
-                  lineHeight: 1.7,
-                  resize: "none",
-                  outline: "none",
-                  fontFamily: "var(--font-sans)",
-                  transition: "border-color 0.2s",
-                }}
-                onFocus={(e) => (e.target.style.borderColor = "var(--accent)")}
-                onBlur={(e) => (e.target.style.borderColor = "var(--border)")}
+                className="w-full flex-1 min-h-[160px] p-4 bg-slate-50 border border-slate-200 focus:bg-white focus:border-primary-500 focus:ring-4 focus:ring-primary-500/10 rounded-xl text-[13px] font-medium text-slate-600 transition-all outline-none resize-none leading-relaxed"
+                placeholder="Enter invoice terms and conditions here..."
               />
             </div>
           </div>
         </div>
 
-        {/* RIGHT — Live Calculation */}
-        <LiveCalc
-          subtotal={subtotal} cgstAmt={cgstAmt} sgstAmt={sgstAmt} totalTax={totalTax}
-          grandTotal={grandTotal} rate={rate} invoiceNo={invoiceNo} invoiceDate={invoiceDate}
-          dueDate={dueDate} items={items} totalQty={totalQty} seller={seller} buyer={buyer}
-        />
+        {/* RIGHT COLUMN — Live Calculation */}
+        <div className="animate-slide-up" style={{animationDelay: "0.1s"}}>
+          <LiveCalc
+            subtotal={subtotal} cgstAmt={cgstAmt} sgstAmt={sgstAmt} totalTax={totalTax}
+            grandTotal={grandTotal} rate={rate} invoiceNo={invoiceNo} invoiceDate={invoiceDate}
+            dueDate={dueDate} items={items} totalQty={totalQty} seller={seller} buyer={buyer}
+          />
+        </div>
+        
       </div>
     </div>
   );
