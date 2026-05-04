@@ -216,7 +216,7 @@ router.get("/:id/pdf", async (req, res) => {
     // Seller address
     doc.font("Helvetica-Bold").fontSize(9).fillColor("#000");
     doc.text(invoice.seller.address, left, y, { width: pageW, align: "center" });
-    y += 25;
+    y += 30;
 
     // GST Number
     doc.font("Helvetica-Bold").fontSize(11).fillColor("#000");
