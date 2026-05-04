@@ -205,6 +205,7 @@ export default function Dashboard() {
               <thead>
                 <tr className="bg-slate-50/80 border-b border-slate-200 text-[11px] font-bold text-slate-500 uppercase tracking-wider">
                   <th className="py-3.5 px-6">Invoice No.</th>
+                  <th className="py-3.5 px-6">Created Date</th>
                   <th className="py-3.5 px-6">Seller</th>
                   <th className="py-3.5 px-6">Buyer</th>
                   <th className="py-3.5 px-6 text-right">Amount</th>
@@ -217,6 +218,9 @@ export default function Dashboard() {
                   <tr key={inv._id} className="hover:bg-slate-50/80 transition-colors group">
                     <td className="py-4 px-6">
                       <div className="font-bold text-primary-600 font-mono">{inv.invoiceNo}</div>
+                    </td>
+                    <td className="py-4 px-6">
+                      <div className="font-bold text-primary-600 font-mono">{new Date(inv.createdAt).toLocaleDateString('en-GB')}</div>
                     </td>
                     <td className="py-4 px-6">
                       <div className="font-semibold text-slate-900">{inv.seller?.name || "—"}</div>
